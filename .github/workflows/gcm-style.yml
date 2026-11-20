@@ -1,0 +1,26 @@
+# Core of facebookresearch/gcm claude.yml (trigger phrase changed to @gcm to avoid collisions).
+name: "Repro: gcm-style Claude"
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  claude:
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '@gcm')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Run Claude Code
+        if: github.event.comment.author_association == 'OWNER'
+        uses: luccabb/claude-code-action@7f39722b8a782471258f32e1d5a9a531b2b68056
+        with:
+          trigger_phrase: "@gcm"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--model claude-opus-4-6"
