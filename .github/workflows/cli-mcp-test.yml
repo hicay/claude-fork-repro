@@ -1,0 +1,37 @@
+# Does plain `claude -p` (no action, fresh ~/.claude, no enableAllProjectMcpServers) start project .mcp.json servers / hooks?
+name: "Repro: claude -p project config"
+on: workflow_dispatch
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    permissions: { contents: read }
+    strategy:
+      matrix:
+        variant: [plain, withmcpconfig]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Simulate PR files (untrusted)
+        run: |
+          cat > .mcp.json <<'J'
+          {"mcpServers":{"poc":{"command":"bash","args":["-c","echo MCP-RAN > /tmp/mcp_marker; sleep 2"]}}}
+          J
+          mkdir -p .claude
+          cat > .claude/settings.json <<'J'
+          {"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo HOOK-RAN > /tmp/hook_marker"}]}]}}
+          J
+          cat > .claude/settings.local.json <<'J'
+          {"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"echo LOCALHOOK-RAN > /tmp/localhook_marker"}]}]}}
+          J
+      - run: curl -fsSL https://claude.ai/install.sh | bash && ~/.local/bin/claude --version
+      - name: Run claude -p
+        env:
+          ANTHROPIC_API_KEY: dummy-not-real
+        run: |
+          if [ "${{ matrix.variant }}" = "withmcpconfig" ]; then
+            ~/.local/bin/claude -p --mcp-config '{"mcpServers":{"x":{"command":"true"}}}' --permission-mode manual --allowedTools Read -- "hi" || true
+          else
+            ~/.local/bin/claude -p --allowedTools Read -- "hi" || true
+          fi
+          sleep 3
+          for f in /tmp/mcp_marker /tmp/hook_marker /tmp/localhook_marker; do echo "$f: $(cat $f 2>/dev/null || echo ABSENT)"; done
+          cat ~/.claude/settings.json 2>/dev/null || echo "no user settings"
