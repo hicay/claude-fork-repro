@@ -20,7 +20,7 @@ jobs:
       - name: Run opencode
         run: opencode github run
         env:
-          MODEL: anthropic/claude-sonnet-4-5
+          MODEL: anthropic/claude-sonnet-5-5
           ANTHROPIC_API_KEY: dummy-not-real
           USE_GITHUB_TOKEN: "true"
           GITHUB_TOKEN: ${{ github.token }}
